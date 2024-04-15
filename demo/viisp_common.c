@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 ASR Micro Limited
+ * Copyright (C) 2023 Spacemit Limited
  * All Rights Reserved.
  */
 #include "viisp_common.h"
@@ -8,7 +8,7 @@
 
 #include "cam_log.h"
 
-//#define EN_ISP_TUNING
+// #define EN_ISP_TUNING
 static const char ispInputFwFile[2][128] = {"/tmp/isp0_input_setting.data", "/tmp/isp1_input_setting.data"};
 static const char ispOutputFwFile[2][128] = {"/tmp/isp0_output_setting.data", "/tmp/isp1_output_setting.data"};
 static const char ispIndividualSettingFile[2][128] = {"/tmp/isp0_cae_setting.data", "/tmp/isp1_cae_setting.data"};
@@ -799,4 +799,29 @@ int viisp_isp_triggerRawCapture(int firmwareId, IMAGE_BUFFER_S* buffer)
     }
 
     return ret;
+}
+
+void ispout_framerate_stat(uint32_t nChn)
+{
+    uint64_t diff_time = 0;
+
+    struct timeval tv;
+    static struct timeval stv[2];
+    static uint32_t count[2] = {0};
+    static uint32_t sum_count[2] = {0};
+    uint32_t fps = 0;
+
+    gettimeofday(&tv, NULL);
+
+    if (count[nChn] == 0) {
+        stv[nChn] = tv;
+    }
+    sum_count[nChn]++;
+
+    if (count[nChn]++ >= 30) {
+        diff_time = (tv.tv_sec - stv[nChn].tv_sec) * 1000 + (tv.tv_usec - stv[nChn].tv_usec) / 1000;
+        fps = 1000	* (count[nChn] - 1) / diff_time;
+        count[nChn] = 0;
+        printf("isp vi ch%d----------------- output fps: (%d %d) \r\n", nChn, sum_count[nChn], fps);
+    }
 }
